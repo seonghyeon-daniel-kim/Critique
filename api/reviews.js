@@ -79,6 +79,21 @@ function json(data, init = {}) {
   });
 }
 
+function toErrorPayload(message, error) {
+  const details = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : "";
+
+  console.error(message, {
+    details,
+    stack
+  });
+
+  return {
+    error: message,
+    details
+  };
+}
+
 export async function GET() {
   const reviews = await loadStoredReviews();
   return json({ reviews });
@@ -100,13 +115,7 @@ export async function POST(request) {
     await saveStoredReviews(reviews);
     return json({ reviews, review });
   } catch (error) {
-    return json(
-      {
-        error: "리뷰 저장에 실패했습니다.",
-        details: error instanceof Error ? error.message : String(error)
-      },
-      { status: 500 }
-    );
+    return json(toErrorPayload("리뷰 저장에 실패했습니다.", error), { status: 500 });
   }
 }
 
@@ -132,12 +141,6 @@ export async function DELETE(request) {
     await saveStoredReviews(nextReviews);
     return json({ reviews: nextReviews });
   } catch (error) {
-    return json(
-      {
-        error: "리뷰 삭제에 실패했습니다.",
-        details: error instanceof Error ? error.message : String(error)
-      },
-      { status: 500 }
-    );
+    return json(toErrorPayload("리뷰 삭제에 실패했습니다.", error), { status: 500 });
   }
 }
