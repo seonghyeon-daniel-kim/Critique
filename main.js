@@ -1,15 +1,13 @@
 const REVIEW_API_ENDPOINT = "/api/reviews";
 const AUTH_API_ENDPOINT = "/api/auth";
-
 const defaultReview = {
-  id: "beethoven-7-kleiber",
-  label: "Featured Review",
-  rating: "5.0 / 5",
-  title: "베토벤 교향곡 7번",
-  subtitle: "Carlos Kleiber · Vienna Philharmonic",
+  id: "",
+  label: "Review Draft",
+  rating: "Unscored",
+  title: "",
+  subtitle: "",
   youtubeUrl: "",
-  body:
-    "이 연주는 리듬의 추진력과 구조적 긴장을 놀라울 만큼 우아하게 결합한다. 2악장의 장중한 호흡은 과장 없이 깊이를 확보하고, 종악장에서는 베토벤 특유의 광휘가 단단한 균형감 속에서 폭발한다."
+  body: ""
 };
 
 let isEditMode = false;
@@ -110,6 +108,49 @@ function createReviewCard(review, editable = false) {
   `;
 }
 
+function renderLoadingState() {
+  const list = document.querySelector("[data-review-list]");
+
+  if (!list) {
+    return;
+  }
+
+  list.innerHTML = `
+    <section class="loading-state" aria-live="polite">
+      <p class="loading-copy">악기들이 서로의 음을 맞추고 있습니다. 잠시만 기다려주세요.</p>
+      <div class="skeleton-list">
+        ${Array.from({ length: 3 }, () => `
+          <article class="review-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-meta"></div>
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-subtitle"></div>
+            <div class="skeleton-line skeleton-body"></div>
+            <div class="skeleton-line skeleton-body short"></div>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderEmptyState() {
+  const list = document.querySelector("[data-review-list]");
+
+  if (!list) {
+    return;
+  }
+
+  list.innerHTML = `
+    <article class="review-card empty-state empty-state-card">
+      <p class="empty-state-kicker">Awaiting The First Note</p>
+      <h3>침묵으로 가득 찬 공간입니다.</h3>
+      <p class="review-body">
+        아직 첫 번째 연주가 기록되지 않았습니다. Edit 버튼을 눌러 첫 비평을 시작해 보세요.
+      </p>
+    </article>
+  `;
+}
+
 function renderReview(review, scope = document) {
   const label = scope.querySelector("[data-review-label]");
   const rating = scope.querySelector("[data-review-rating]");
@@ -143,7 +184,7 @@ function renderViewerReviews(reviews) {
   }
 
   if (reviews.length === 0) {
-    list.innerHTML = '<div class="review-card empty-state">아직 공개된 리뷰가 없습니다. 이 페이지 상단의 편집 영역에서 첫 리뷰를 작성하세요.</div>';
+    renderEmptyState();
     return;
   }
 
@@ -151,7 +192,7 @@ function renderViewerReviews(reviews) {
 }
 
 function initViewerPage() {
-  renderViewerReviews([defaultReview]);
+  renderEmptyState();
 }
 
 async function fetchReviews() {
@@ -570,6 +611,8 @@ function initEditorPage() {
     });
   }
 }
+
+renderLoadingState();
 
 Promise.allSettled([fetchReviews(), fetchAuthStatus()]).then(([reviewsResult, authResult]) => {
   if (reviewsResult.status === "fulfilled") {

@@ -7,14 +7,13 @@ import { isAuthenticated, unauthorizedResponse } from "./_auth.js";
 const REVIEW_TABLE = "classic_critic_reviews";
 
 const defaultReview = {
-  id: "beethoven-7-kleiber",
-  label: "Featured Review",
-  rating: "5.0 / 5",
-  title: "베토벤 교향곡 7번",
-  subtitle: "Carlos Kleiber · Vienna Philharmonic",
+  id: "",
+  label: "Review Draft",
+  rating: "Unscored",
+  title: "",
+  subtitle: "",
   youtubeUrl: "",
-  body:
-    "이 연주는 리듬의 추진력과 구조적 긴장을 놀라울 만큼 우아하게 결합한다. 2악장의 장중한 호흡은 과장 없이 깊이를 확보하고, 종악장에서는 베토벤 특유의 광휘가 단단한 균형감 속에서 폭발한다."
+  body: ""
 };
 
 function loadLocalEnvFile() {
@@ -217,17 +216,17 @@ async function loadStoredReviews() {
   try {
     if (provider === "vercel-postgres") {
       const reviews = await loadPostgresReviews();
-      return reviews.length > 0 ? reviews : [defaultReview];
+      return reviews.length > 0 ? reviews : [];
     }
 
     if (provider === "supabase") {
       const reviews = await loadSupabaseReviews();
-      return reviews.length > 0 ? reviews : [defaultReview];
+      return reviews.length > 0 ? reviews : [];
     }
 
-    return [defaultReview];
+    return [];
   } catch (error) {
-    return [defaultReview];
+    return [];
   }
 }
 
