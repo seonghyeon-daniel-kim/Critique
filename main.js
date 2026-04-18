@@ -8,6 +8,7 @@ const defaultReview = {
   rating: "5.0 / 5",
   title: "베토벤 교향곡 7번",
   subtitle: "Carlos Kleiber · Vienna Philharmonic",
+  youtubeUrl: "",
   body:
     "이 연주는 리듬의 추진력과 구조적 긴장을 놀라울 만큼 우아하게 결합한다. 2악장의 장중한 호흡은 과장 없이 깊이를 확보하고, 종악장에서는 베토벤 특유의 광휘가 단단한 균형감 속에서 폭발한다."
 };
@@ -19,6 +20,7 @@ function createEmptyReview() {
     rating: "4.8 / 5",
     title: "",
     subtitle: "",
+    youtubeUrl: "",
     body: ""
   };
 }
@@ -47,6 +49,7 @@ function normalizeReview(review) {
     rating: review.rating || defaultReview.rating,
     title: review.title || defaultReview.title,
     subtitle: review.subtitle || defaultReview.subtitle,
+    youtubeUrl: review.youtubeUrl || "",
     body: review.body || defaultReview.body
   };
 }
@@ -79,7 +82,44 @@ function saveReviews(reviews) {
   localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(reviews));
 }
 
+function toYoutubeEmbedUrl(url) {
+  if (!url) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    let videoId = "";
+
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      if (parsed.pathname === "/watch") {
+        videoId = parsed.searchParams.get("v") || "";
+      } else if (parsed.pathname.startsWith("/embed/")) {
+        videoId = parsed.pathname.split("/embed/")[1] || "";
+      } else if (parsed.pathname.startsWith("/shorts/")) {
+        videoId = parsed.pathname.split("/shorts/")[1] || "";
+      }
+    }
+
+    if (host === "youtu.be") {
+      videoId = parsed.pathname.replace("/", "");
+    }
+
+    if (!videoId) {
+      return "";
+    }
+
+    videoId = videoId.split(/[?&/]/)[0];
+    return `https://www.youtube.com/embed/${videoId}`;
+  } catch (error) {
+    return "";
+  }
+}
+
 function createReviewCard(review) {
+  const embedUrl = toYoutubeEmbedUrl(review.youtubeUrl);
+
   return `
     <article class="review-card" aria-label="${escapeHtml(review.title || "리뷰")}">
       <div class="review-meta">
@@ -88,6 +128,7 @@ function createReviewCard(review) {
       </div>
       <h2>${escapeHtml(review.title)}</h2>
       <p class="review-subtitle">${escapeHtml(review.subtitle)}</p>
+      ${embedUrl ? `<div class="video-frame-wrap"><iframe class="video-frame" src="${escapeHtml(embedUrl)}" title="YouTube video player" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : ""}
       <p class="review-body">${escapeHtml(review.body)}</p>
     </article>
   `;
@@ -98,12 +139,23 @@ function renderReview(review, scope = document) {
   const rating = scope.querySelector("[data-review-rating]");
   const title = scope.querySelector("[data-review-title]");
   const subtitle = scope.querySelector("[data-review-subtitle]");
+  const videoWrap = scope.querySelector("[data-video-wrap]");
+  const videoFrame = scope.querySelector("[data-video-frame]");
   const body = scope.querySelector("[data-review-body]");
 
   if (label) label.textContent = review.label;
   if (rating) rating.textContent = review.rating;
   if (title) title.textContent = review.title;
   if (subtitle) subtitle.textContent = review.subtitle;
+  if (videoWrap && videoFrame) {
+    const embedUrl = toYoutubeEmbedUrl(review.youtubeUrl);
+    videoWrap.classList.toggle("is-hidden", !embedUrl);
+    if (embedUrl) {
+      videoFrame.src = embedUrl;
+    } else {
+      videoFrame.src = "";
+    }
+  }
   if (body) body.textContent = review.body;
 }
 
@@ -158,6 +210,7 @@ function populateEditorForm(form, review) {
   form.elements.rating.value = review.rating || "";
   form.elements.title.value = review.title || "";
   form.elements.subtitle.value = review.subtitle || "";
+  form.elements.youtubeUrl.value = review.youtubeUrl || "";
   form.elements.body.value = review.body || "";
   updateEditorModeLabel(Boolean(review.id));
 }
@@ -169,6 +222,7 @@ function getFormReview(form) {
     rating: form.elements.rating.value.trim(),
     title: form.elements.title.value.trim(),
     subtitle: form.elements.subtitle.value.trim(),
+    youtubeUrl: form.elements.youtubeUrl.value.trim(),
     body: form.elements.body.value.trim()
   };
 }

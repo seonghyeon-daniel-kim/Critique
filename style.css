@@ -337,6 +337,21 @@ h2 {
   font-size: 1rem;
 }
 
+.video-frame-wrap {
+  margin: -6px 0 20px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(116, 87, 51, 0.08);
+  border: 1px solid rgba(92, 67, 39, 0.12);
+}
+
+.video-frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
+
 .review-body {
   margin: 0;
   line-height: 1.9;
