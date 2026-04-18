@@ -207,6 +207,27 @@ h1 {
   border-color: rgba(92, 67, 39, 0.14);
 }
 
+.edit-toggle {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 50;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(92, 67, 39, 0.18);
+  background: rgba(255, 250, 242, 0.82);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 16px 32px rgba(88, 63, 39, 0.14);
+  backdrop-filter: blur(8px);
+}
+
+.edit-toggle:hover {
+  background: rgba(255, 252, 247, 0.96);
+}
+
 .editor-header {
   display: flex;
   justify-content: space-between;
@@ -264,6 +285,23 @@ h1 {
 .viewer-list {
   display: grid;
   gap: 24px;
+}
+
+.review-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.review-inline-button {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(92, 67, 39, 0.16);
+  background: rgba(255, 250, 242, 0.82);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
 }
 
 .manager-actions {

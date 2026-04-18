@@ -1,6 +1,9 @@
-import { put, get, del } from "@vercel/blob";
+import { sql } from "@vercel/postgres";
+import { createClient } from "@supabase/supabase-js";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const REVIEW_BLOB_PATH = "classic-critic/reviews.json";
+const REVIEW_TABLE = "classic_critic_reviews";
 
 const defaultReview = {
   id: "beethoven-7-kleiber",
@@ -12,6 +15,39 @@ const defaultReview = {
   body:
     "이 연주는 리듬의 추진력과 구조적 긴장을 놀라울 만큼 우아하게 결합한다. 2악장의 장중한 호흡은 과장 없이 깊이를 확보하고, 종악장에서는 베토벤 특유의 광휘가 단단한 균형감 속에서 폭발한다."
 };
+
+function loadLocalEnvFile() {
+  const envPath = join(process.cwd(), ".env.local");
+
+  if (!existsSync(envPath)) {
+    return;
+  }
+
+  const raw = readFileSync(envPath, "utf8");
+
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf("=");
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    const value = trimmed.slice(separatorIndex + 1).trim();
+
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadLocalEnvFile();
 
 function createId() {
   return `review-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -29,45 +65,205 @@ function normalizeReview(review) {
   };
 }
 
-async function readStreamAsText(stream) {
-  return new Response(stream).text();
+function getStorageProvider() {
+  if (process.env.POSTGRES_URL) {
+    return "vercel-postgres";
+  }
+
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return "supabase";
+  }
+
+  return "memory";
+}
+
+function getSupabaseClient() {
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
+
+function mapRowToReview(row) {
+  return normalizeReview({
+    id: row.id,
+    label: row.label,
+    rating: row.rating,
+    title: row.title,
+    subtitle: row.subtitle,
+    youtubeUrl: row.youtube_url ?? row.youtubeUrl ?? "",
+    body: row.body
+  });
+}
+
+async function ensurePostgresTable() {
+  await sql.query(`
+    CREATE TABLE IF NOT EXISTS ${REVIEW_TABLE} (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      rating TEXT NOT NULL,
+      title TEXT NOT NULL,
+      subtitle TEXT NOT NULL,
+      youtube_url TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+}
+
+async function loadPostgresReviews() {
+  await ensurePostgresTable();
+
+  const { rows } = await sql.query(`
+    SELECT id, label, rating, title, subtitle, youtube_url, body
+    FROM ${REVIEW_TABLE}
+    ORDER BY updated_at DESC, created_at DESC;
+  `);
+
+  return rows.map((row) => mapRowToReview(row));
+}
+
+async function savePostgresReview(review) {
+  await ensurePostgresTable();
+
+  await sql`
+    INSERT INTO classic_critic_reviews (
+      id, label, rating, title, subtitle, youtube_url, body
+    )
+    VALUES (
+      ${review.id},
+      ${review.label},
+      ${review.rating},
+      ${review.title},
+      ${review.subtitle},
+      ${review.youtubeUrl},
+      ${review.body}
+    )
+    ON CONFLICT (id)
+    DO UPDATE SET
+      label = EXCLUDED.label,
+      rating = EXCLUDED.rating,
+      title = EXCLUDED.title,
+      subtitle = EXCLUDED.subtitle,
+      youtube_url = EXCLUDED.youtube_url,
+      body = EXCLUDED.body,
+      updated_at = NOW();
+  `;
+}
+
+async function deletePostgresReview(reviewId) {
+  await ensurePostgresTable();
+  await sql`DELETE FROM classic_critic_reviews WHERE id = ${reviewId};`;
+}
+
+async function loadSupabaseReviews() {
+  const client = getSupabaseClient();
+  const { data, error } = await client
+    .from(REVIEW_TABLE)
+    .select("id, label, rating, title, subtitle, youtube_url, body")
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(
+      `Supabase 조회에 실패했습니다. classic_critic_reviews 테이블이 있는지 확인하세요. ${error.message}`
+    );
+  }
+
+  return (data || []).map((row) => mapRowToReview(row));
+}
+
+async function saveSupabaseReview(review) {
+  const client = getSupabaseClient();
+  const { error } = await client.from(REVIEW_TABLE).upsert(
+    {
+      id: review.id,
+      label: review.label,
+      rating: review.rating,
+      title: review.title,
+      subtitle: review.subtitle,
+      youtube_url: review.youtubeUrl,
+      body: review.body,
+      updated_at: new Date().toISOString()
+    },
+    {
+      onConflict: "id"
+    }
+  );
+
+  if (error) {
+    throw new Error(
+      `Supabase 저장에 실패했습니다. classic_critic_reviews 테이블과 권한을 확인하세요. ${error.message}`
+    );
+  }
+}
+
+async function deleteSupabaseReview(reviewId) {
+  const client = getSupabaseClient();
+  const { error } = await client.from(REVIEW_TABLE).delete().eq("id", reviewId);
+
+  if (error) {
+    throw new Error(`Supabase 삭제에 실패했습니다. ${error.message}`);
+  }
 }
 
 async function loadStoredReviews() {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return [defaultReview];
-  }
+  const provider = getStorageProvider();
 
   try {
-    const result = await get(REVIEW_BLOB_PATH);
-
-    if (!result || result.statusCode !== 200 || !result.stream) {
-      return [defaultReview];
+    if (provider === "vercel-postgres") {
+      const reviews = await loadPostgresReviews();
+      return reviews.length > 0 ? reviews : [defaultReview];
     }
 
-    const raw = await readStreamAsText(result.stream);
-    const parsed = JSON.parse(raw);
-
-    if (!Array.isArray(parsed)) {
-      return [defaultReview];
+    if (provider === "supabase") {
+      const reviews = await loadSupabaseReviews();
+      return reviews.length > 0 ? reviews : [defaultReview];
     }
 
-    return parsed.map((review) => normalizeReview(review));
+    return [defaultReview];
   } catch (error) {
     return [defaultReview];
   }
 }
 
-async function saveStoredReviews(reviews) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    throw new Error("BLOB_READ_WRITE_TOKEN is not configured.");
+async function saveStoredReview(review) {
+  const provider = getStorageProvider();
+
+  if (provider === "vercel-postgres") {
+    await savePostgresReview(review);
+    return;
   }
 
-  await put(REVIEW_BLOB_PATH, JSON.stringify(reviews, null, 2), {
-    access: "public",
-    allowOverwrite: true,
-    contentType: "application/json"
-  });
+  if (provider === "supabase") {
+    await saveSupabaseReview(review);
+    return;
+  }
+
+  throw new Error(
+    "저장용 데이터베이스가 설정되지 않았습니다. POSTGRES_URL 또는 SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY를 설정하세요."
+  );
+}
+
+async function deleteStoredReview(reviewId) {
+  const provider = getStorageProvider();
+
+  if (provider === "vercel-postgres") {
+    await deletePostgresReview(reviewId);
+    return;
+  }
+
+  if (provider === "supabase") {
+    await deleteSupabaseReview(reviewId);
+    return;
+  }
+
+  throw new Error(
+    "삭제용 데이터베이스가 설정되지 않았습니다. POSTGRES_URL 또는 SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY를 설정하세요."
+  );
 }
 
 function json(data, init = {}) {
@@ -90,7 +286,8 @@ function toErrorPayload(message, error) {
 
   return {
     error: message,
-    details
+    details,
+    provider: getStorageProvider()
   };
 }
 
@@ -103,16 +300,8 @@ export async function POST(request) {
   try {
     const payload = await request.json();
     const review = normalizeReview(payload.review || {});
+    await saveStoredReview(review);
     const reviews = await loadStoredReviews();
-    const existingIndex = reviews.findIndex((item) => item.id === review.id);
-
-    if (existingIndex >= 0) {
-      reviews[existingIndex] = review;
-    } else {
-      reviews.unshift(review);
-    }
-
-    await saveStoredReviews(reviews);
     return json({ reviews, review });
   } catch (error) {
     return json(toErrorPayload("리뷰 저장에 실패했습니다.", error), { status: 500 });
@@ -128,18 +317,9 @@ export async function DELETE(request) {
       return json({ error: "삭제할 리뷰 ID가 없습니다." }, { status: 400 });
     }
 
+    await deleteStoredReview(reviewId);
     const reviews = await loadStoredReviews();
-    const nextReviews = reviews.filter((review) => review.id !== reviewId);
-
-    if (nextReviews.length === 0) {
-      if (process.env.BLOB_READ_WRITE_TOKEN) {
-        await del(REVIEW_BLOB_PATH);
-      }
-      return json({ reviews: [] });
-    }
-
-    await saveStoredReviews(nextReviews);
-    return json({ reviews: nextReviews });
+    return json({ reviews });
   } catch (error) {
     return json(toErrorPayload("리뷰 삭제에 실패했습니다.", error), { status: 500 });
   }

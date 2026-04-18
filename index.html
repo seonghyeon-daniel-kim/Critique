@@ -16,32 +16,11 @@
       </p>
     </header>
 
-    <section class="editor-gate" data-editor-gate>
-      <div class="gate-card">
-        <p class="eyebrow">Private Access</p>
-        <h2 class="gate-title">Editor Login</h2>
-        <p class="gate-copy">
-          이 페이지 안에서 바로 리뷰를 작성하거나 수정할 수 있습니다. 편집 기능은 비밀번호 입력 후 열립니다.
-        </p>
-        <form class="gate-form" data-login-form>
-          <label class="field">
-            <span>비밀번호</span>
-            <input type="password" name="password" placeholder="관리자 비밀번호" required>
-          </label>
-          <p class="form-message" data-login-message></p>
-          <button type="submit" class="button-primary">편집 열기</button>
-        </form>
-      </div>
-    </section>
-
     <section class="editor-panel is-hidden" data-editor-panel>
       <header class="editor-header">
         <div>
-          <p class="eyebrow">Write And Publish In One Place</p>
-          <h2 class="editor-title">Review Desk</h2>
-        </div>
-        <div class="editor-actions">
-          <button type="button" class="button-secondary" data-logout-button>잠금</button>
+          <p class="eyebrow">Edit Mode</p>
+          <h2 class="editor-title">새 리뷰 작성</h2>
         </div>
       </header>
 
@@ -153,6 +132,7 @@
       </article>
     </section>
   </main>
+  <button type="button" class="edit-toggle" data-edit-toggle>Edit</button>
   <script defer type="text/javascript" src="/main.js"></script>
 </body>
 </html>

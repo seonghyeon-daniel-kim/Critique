@@ -1,5 +1,3 @@
-const AUTH_STORAGE_KEY = "classic-critic-editor-auth";
-const ADMIN_PASSWORD = "classiccritic-admin";
 const REVIEW_API_ENDPOINT = "/api/reviews";
 
 const defaultReview = {
@@ -12,6 +10,8 @@ const defaultReview = {
   body:
     "이 연주는 리듬의 추진력과 구조적 긴장을 놀라울 만큼 우아하게 결합한다. 2악장의 장중한 호흡은 과장 없이 깊이를 확보하고, 종악장에서는 베토벤 특유의 광휘가 단단한 균형감 속에서 폭발한다."
 };
+
+let isEditMode = false;
 
 function createEmptyReview() {
   return {
@@ -89,42 +89,7 @@ function toYoutubeEmbedUrl(url) {
   }
 }
 
-function toYoutubeEmbedUrl(url) {
-  if (!url) {
-    return "";
-  }
-
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.replace(/^www\./, "");
-    let videoId = "";
-
-    if (host === "youtube.com" || host === "m.youtube.com") {
-      if (parsed.pathname === "/watch") {
-        videoId = parsed.searchParams.get("v") || "";
-      } else if (parsed.pathname.startsWith("/embed/")) {
-        videoId = parsed.pathname.split("/embed/")[1] || "";
-      } else if (parsed.pathname.startsWith("/shorts/")) {
-        videoId = parsed.pathname.split("/shorts/")[1] || "";
-      }
-    }
-
-    if (host === "youtu.be") {
-      videoId = parsed.pathname.replace("/", "");
-    }
-
-    if (!videoId) {
-      return "";
-    }
-
-    videoId = videoId.split(/[?&/]/)[0];
-    return `https://www.youtube.com/embed/${videoId}`;
-  } catch (error) {
-    return "";
-  }
-}
-
-function createReviewCard(review) {
+function createReviewCard(review, editable = false) {
   const embedUrl = toYoutubeEmbedUrl(review.youtubeUrl);
 
   return `
@@ -137,6 +102,7 @@ function createReviewCard(review) {
       <p class="review-subtitle">${escapeHtml(review.subtitle)}</p>
       ${embedUrl ? `<div class="video-frame-wrap"><iframe class="video-frame" src="${escapeHtml(embedUrl)}" title="YouTube video player" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : ""}
       <p class="review-body">${escapeHtml(review.body)}</p>
+      ${editable ? `<div class="review-card-actions"><button type="button" class="review-inline-button" data-edit-review="${escapeHtml(review.id)}">수정</button></div>` : ""}
     </article>
   `;
 }
@@ -178,7 +144,7 @@ function renderViewerReviews(reviews) {
     return;
   }
 
-  list.innerHTML = reviews.map((review) => createReviewCard(review)).join("");
+  list.innerHTML = reviews.map((review) => createReviewCard(review, isEditMode)).join("");
 }
 
 function initViewerPage() {
@@ -235,16 +201,14 @@ async function requestJson(url, options) {
   return data;
 }
 
-function setEditorVisibility(isAuthenticated) {
-  const gate = document.querySelector("[data-editor-gate]");
+function setEditorVisibility(isVisible) {
   const panel = document.querySelector("[data-editor-panel]");
 
-  if (!gate || !panel) {
+  if (!panel) {
     return;
   }
 
-  gate.classList.toggle("is-hidden", isAuthenticated);
-  panel.classList.toggle("is-hidden", !isAuthenticated);
+  panel.classList.toggle("is-hidden", !isVisible);
 }
 
 function setSaveMessage(message) {
@@ -317,17 +281,14 @@ function renderManagerList(reviews, activeId) {
 }
 
 function initEditorPage() {
-  const loginForm = document.querySelector("[data-login-form]");
-  const loginMessage = document.querySelector("[data-login-message]");
   const editorForm = document.querySelector("[data-editor-form]");
-  const logoutButton = document.querySelector("[data-logout-button]");
   const newReviewButton = document.querySelector("[data-new-review-button]");
   const deleteReviewButton = document.querySelector("[data-delete-review-button]");
-  const isAuthenticated = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
+  const editToggleButton = document.querySelector("[data-edit-toggle]");
   let reviews = [defaultReview];
   let activeReviewId = reviews[0]?.id || "";
 
-  setEditorVisibility(isAuthenticated);
+  setEditorVisibility(isEditMode);
 
   if (editorForm) {
     const syncEditorPreview = (review) => {
@@ -433,13 +394,34 @@ function initEditorPage() {
     }
 
     document.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-review-select]");
+      const selectButton = event.target.closest("[data-review-select]");
+      const editButton = event.target.closest("[data-edit-review]");
 
-      if (!button) {
+      if (editButton) {
+        const review = reviews.find((item) => item.id === editButton.dataset.editReview);
+
+        if (review) {
+          if (!isEditMode) {
+            isEditMode = true;
+            setEditorVisibility(true);
+            renderViewerReviews(reviews);
+            if (editToggleButton) {
+              editToggleButton.textContent = "Done";
+            }
+          }
+
+          selectReview(review);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
         return;
       }
 
-      const review = reviews.find((item) => item.id === button.dataset.reviewSelect);
+      if (!selectButton) {
+        return;
+      }
+
+      const review = reviews.find((item) => item.id === selectButton.dataset.reviewSelect);
 
       if (review) {
         selectReview(review);
@@ -447,33 +429,29 @@ function initEditorPage() {
     });
   }
 
-  if (loginForm) {
-    loginForm.addEventListener("submit", (event) => {
-      event.preventDefault();
+  if (editToggleButton) {
+    editToggleButton.addEventListener("click", () => {
+      isEditMode = !isEditMode;
+      setEditorVisibility(isEditMode);
+      renderViewerReviews(reviews);
+      editToggleButton.textContent = isEditMode ? "Done" : "Edit";
 
-      const password = loginForm.elements.password.value;
+      if (isEditMode) {
+        const activeReview = reviews.find((item) => item.id === activeReviewId) || reviews[0];
 
-      if (password === ADMIN_PASSWORD) {
-        localStorage.setItem(AUTH_STORAGE_KEY, "true");
-        loginForm.reset();
-        if (loginMessage) {
-          loginMessage.textContent = "";
+        if (activeReview) {
+          const previewReview = activeReview.id ? activeReview : defaultReview;
+          populateEditorForm(editorForm, previewReview);
+          renderManagerList(reviews, activeReviewId);
+          renderReview(previewReview);
+        } else {
+          populateEditorForm(editorForm, createEmptyReview());
+          renderManagerList(reviews, "");
+          renderReview(defaultReview);
         }
-        setEditorVisibility(true);
-        return;
+      } else {
+        setSaveMessage("");
       }
-
-      if (loginMessage) {
-        loginMessage.textContent = "비밀번호가 일치하지 않습니다.";
-      }
-    });
-  }
-
-  if (logoutButton) {
-    logoutButton.addEventListener("click", () => {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      setSaveMessage("");
-      setEditorVisibility(false);
     });
   }
 }
