@@ -7,7 +7,7 @@
   <link href='/style.css' rel='stylesheet'>
 </head>
 <body>
-  <main class="page-shell viewer-shell">
+  <main class="page-shell combined-shell">
     <header class="hero">
       <p class="eyebrow">Timeless Reviews for Timeless Works</p>
       <h1>Classic Critic</h1>
@@ -15,6 +15,127 @@
         깊이 있는 해석과 섬세한 문장으로 명반과 명연을 다시 듣는 클래식 음악 비평 아카이브.
       </p>
     </header>
+
+    <section class="editor-gate" data-editor-gate>
+      <div class="gate-card">
+        <p class="eyebrow">Private Access</p>
+        <h2 class="gate-title">Editor Login</h2>
+        <p class="gate-copy">
+          이 페이지 안에서 바로 리뷰를 작성하거나 수정할 수 있습니다. 편집 기능은 비밀번호 입력 후 열립니다.
+        </p>
+        <form class="gate-form" data-login-form>
+          <label class="field">
+            <span>비밀번호</span>
+            <input type="password" name="password" placeholder="관리자 비밀번호" required>
+          </label>
+          <p class="form-message" data-login-message></p>
+          <button type="submit" class="button-primary">편집 열기</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="editor-panel is-hidden" data-editor-panel>
+      <header class="editor-header">
+        <div>
+          <p class="eyebrow">Write And Publish In One Place</p>
+          <h2 class="editor-title">Review Desk</h2>
+        </div>
+        <div class="editor-actions">
+          <button type="button" class="button-secondary" data-logout-button>잠금</button>
+        </div>
+      </header>
+
+      <div class="editor-grid">
+        <aside class="review-card manager-card">
+          <div class="review-meta">
+            <span class="review-label">Review Library</span>
+            <span class="review-rating" data-review-count>1 Review</span>
+          </div>
+          <div class="manager-actions">
+            <button type="button" class="button-primary" data-new-review-button>새 리뷰 작성</button>
+          </div>
+          <div class="review-manager-list" data-review-manager-list></div>
+        </aside>
+
+        <div class="editor-stack">
+          <form class="editor-form review-card" data-editor-form>
+            <input type="hidden" name="reviewId">
+            <div class="review-meta">
+              <span class="review-label" data-editor-mode>Edit Review</span>
+              <span class="review-rating">Listed Below</span>
+            </div>
+
+            <label class="field">
+              <span>라벨</span>
+              <input type="text" name="label" maxlength="30" required>
+            </label>
+
+            <label class="field">
+              <span>평점</span>
+              <input type="text" name="rating" maxlength="20" placeholder="4.8 / 5" required>
+            </label>
+
+            <label class="field">
+              <span>작품 제목</span>
+              <input type="text" name="title" maxlength="80" required>
+            </label>
+
+            <label class="field">
+              <span>연주 정보</span>
+              <input type="text" name="subtitle" maxlength="120" required>
+            </label>
+
+            <label class="field">
+              <span>유튜브 링크</span>
+              <input type="url" name="youtubeUrl" maxlength="300" placeholder="https://www.youtube.com/watch?v=...">
+            </label>
+
+            <label class="field">
+              <span>리뷰 본문</span>
+              <textarea name="body" rows="8" required></textarea>
+            </label>
+
+            <div class="form-footer">
+              <p class="form-message" data-save-message></p>
+              <div class="inline-actions">
+                <button type="button" class="button-secondary" data-delete-review-button>삭제</button>
+                <button type="submit" class="button-primary">리뷰 저장</button>
+              </div>
+            </div>
+          </form>
+
+          <section class="review-card preview-card" aria-label="리뷰 미리보기">
+            <div class="review-meta">
+              <span class="review-label" data-review-label>Featured Review</span>
+              <span class="review-rating" data-review-rating>5.0 / 5</span>
+            </div>
+            <h2 data-review-title>베토벤 교향곡 7번</h2>
+            <p class="review-subtitle" data-review-subtitle>Carlos Kleiber · Vienna Philharmonic</p>
+            <div class="video-frame-wrap is-hidden" data-video-wrap>
+              <iframe
+                class="video-frame"
+                data-video-frame
+                src=""
+                title="YouTube video player"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+              ></iframe>
+            </div>
+            <p class="review-body" data-review-body>
+              이 연주는 리듬의 추진력과 구조적 긴장을 놀라울 만큼 우아하게 결합한다.
+              2악장의 장중한 호흡은 과장 없이 깊이를 확보하고, 종악장에서는 베토벤 특유의
+              광휘가 단단한 균형감 속에서 폭발한다.
+            </p>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-heading">
+      <p class="eyebrow">Published Reviews</p>
+      <h2>리뷰 목록</h2>
+    </section>
 
     <section class="viewer-list" aria-label="리뷰 목록" data-review-list>
       <article class="review-card" aria-label="대표 리뷰">

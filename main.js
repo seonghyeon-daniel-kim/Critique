@@ -169,7 +169,7 @@ function initViewerPage() {
   const reviews = loadReviews();
 
   if (reviews.length === 0) {
-    list.innerHTML = '<div class="review-card empty-state">아직 공개된 리뷰가 없습니다. 에디터 페이지에서 첫 리뷰를 작성하세요.</div>';
+    list.innerHTML = '<div class="review-card empty-state">아직 공개된 리뷰가 없습니다. 이 페이지 상단의 편집 영역에서 첫 리뷰를 작성하세요.</div>';
     return;
   }
 
@@ -325,7 +325,8 @@ function initEditorPage() {
       populateEditorForm(editorForm, review);
       renderManagerList(reviews, activeReviewId);
       syncEditorPreview(review);
-      setSaveMessage("리뷰가 저장되었습니다. 뷰어 페이지를 새로고침하면 반영됩니다.");
+      initViewerPage();
+      setSaveMessage("리뷰가 저장되었습니다. 아래 목록에 바로 반영되었습니다.");
     });
 
     if (newReviewButton) {
@@ -345,6 +346,7 @@ function initEditorPage() {
 
         reviews = reviews.filter((review) => review.id !== reviewId);
         saveReviews(reviews);
+        initViewerPage();
 
         if (reviews.length > 0) {
           selectReview(reviews[0]);
@@ -402,8 +404,8 @@ function initEditorPage() {
   }
 }
 
+initViewerPage();
+
 if (document.querySelector("[data-editor-form]")) {
   initEditorPage();
-} else {
-  initViewerPage();
 }

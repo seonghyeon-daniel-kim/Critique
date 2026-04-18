@@ -46,16 +46,23 @@ body::before {
   padding: 64px 0;
 }
 
-.viewer-shell {
-  align-content: center;
-}
-
+.combined-shell,
 .editor-shell {
   align-content: start;
 }
 
 .hero {
   text-align: center;
+}
+
+.section-heading {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+}
+
+.section-heading h2 {
+  font-size: clamp(2rem, 5vw, 3.2rem);
 }
 
 .eyebrow {
