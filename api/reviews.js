@@ -30,13 +30,7 @@ function normalizeReview(review) {
 }
 
 async function readStreamAsText(stream) {
-  let text = "";
-
-  for await (const chunk of stream) {
-    text += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-  }
-
-  return text;
+  return new Response(stream).text();
 }
 
 async function loadStoredReviews() {
