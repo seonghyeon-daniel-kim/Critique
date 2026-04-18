@@ -1,4 +1,5 @@
 const REVIEW_API_ENDPOINT = "/api/reviews";
+const AUTH_API_ENDPOINT = "/api/auth";
 
 const defaultReview = {
   id: "beethoven-7-kleiber",
@@ -12,6 +13,8 @@ const defaultReview = {
 };
 
 let isEditMode = false;
+let isAuthenticated = false;
+let isAuthConfigured = false;
 
 function createEmptyReview() {
   return {
@@ -201,6 +204,28 @@ async function requestJson(url, options) {
   return data;
 }
 
+async function fetchAuthStatus() {
+  return requestJson(AUTH_API_ENDPOINT, {
+    cache: "no-store"
+  });
+}
+
+async function loginRequest(password) {
+  return requestJson(AUTH_API_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ password })
+  });
+}
+
+async function logoutRequest() {
+  return requestJson(AUTH_API_ENDPOINT, {
+    method: "DELETE"
+  });
+}
+
 function setEditorVisibility(isVisible) {
   const panel = document.querySelector("[data-editor-panel]");
 
@@ -209,6 +234,16 @@ function setEditorVisibility(isVisible) {
   }
 
   panel.classList.toggle("is-hidden", !isVisible);
+}
+
+function setGateVisibility(isVisible) {
+  const gate = document.querySelector("[data-editor-gate]");
+
+  if (!gate) {
+    return;
+  }
+
+  gate.classList.toggle("is-hidden", !isVisible);
 }
 
 function setSaveMessage(message) {
@@ -285,10 +320,15 @@ function initEditorPage() {
   const newReviewButton = document.querySelector("[data-new-review-button]");
   const deleteReviewButton = document.querySelector("[data-delete-review-button]");
   const editToggleButton = document.querySelector("[data-edit-toggle]");
+  const logoutButton = document.querySelector("[data-logout-button]");
+  const loginForm = document.querySelector("[data-login-form]");
+  const loginMessage = document.querySelector("[data-login-message]");
+  const loginCancelButton = document.querySelector("[data-login-cancel]");
   let reviews = [defaultReview];
   let activeReviewId = reviews[0]?.id || "";
 
-  setEditorVisibility(isEditMode);
+  setGateVisibility(false);
+  setEditorVisibility(false);
 
   if (editorForm) {
     const syncEditorPreview = (review) => {
@@ -331,7 +371,7 @@ function initEditorPage() {
         }
       } catch (error) {
         renderManagerList(reviews, activeReviewId);
-        setSaveMessage("서버에서 리뷰를 불러오지 못했습니다. Vercel Blob 연결을 확인하세요.");
+        setSaveMessage("서버에서 리뷰를 불러오지 못했습니다.");
       }
     };
 
@@ -431,39 +471,119 @@ function initEditorPage() {
 
   if (editToggleButton) {
     editToggleButton.addEventListener("click", () => {
+      if (!isAuthenticated) {
+        if (!isAuthConfigured) {
+          window.alert("EDIT_PASSWORD 환경변수가 설정되지 않았습니다.");
+          return;
+        }
+
+        setGateVisibility(true);
+        return;
+      }
+
       isEditMode = !isEditMode;
+      setGateVisibility(false);
       setEditorVisibility(isEditMode);
       renderViewerReviews(reviews);
       editToggleButton.textContent = isEditMode ? "Done" : "Edit";
 
-      if (isEditMode) {
-        const activeReview = reviews.find((item) => item.id === activeReviewId) || reviews[0];
-
-        if (activeReview) {
-          const previewReview = activeReview.id ? activeReview : defaultReview;
-          populateEditorForm(editorForm, previewReview);
-          renderManagerList(reviews, activeReviewId);
-          renderReview(previewReview);
-        } else {
-          populateEditorForm(editorForm, createEmptyReview());
-          renderManagerList(reviews, "");
-          renderReview(defaultReview);
-        }
-      } else {
+      if (!isEditMode) {
         setSaveMessage("");
+        return;
       }
+
+      const activeReview = reviews.find((item) => item.id === activeReviewId) || reviews[0];
+
+      if (activeReview) {
+        const previewReview = activeReview.id ? activeReview : defaultReview;
+        populateEditorForm(editorForm, previewReview);
+        renderManagerList(reviews, activeReviewId);
+        renderReview(previewReview);
+      } else {
+        populateEditorForm(editorForm, createEmptyReview());
+        renderManagerList(reviews, "");
+        renderReview(defaultReview);
+      }
+    });
+  }
+
+  if (loginCancelButton) {
+    loginCancelButton.addEventListener("click", () => {
+      setGateVisibility(false);
+      if (loginMessage) {
+        loginMessage.textContent = "";
+      }
+      if (loginForm) {
+        loginForm.reset();
+      }
+    });
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const password = loginForm.elements.password.value.trim();
+
+      try {
+        await loginRequest(password);
+        isAuthenticated = true;
+        isEditMode = true;
+        setGateVisibility(false);
+        setEditorVisibility(true);
+        renderViewerReviews(reviews);
+        editToggleButton.textContent = "Done";
+        loginForm.reset();
+        if (loginMessage) {
+          loginMessage.textContent = "";
+        }
+
+        const activeReview = reviews.find((item) => item.id === activeReviewId) || reviews[0];
+        if (activeReview) {
+          populateEditorForm(editorForm, activeReview);
+          renderManagerList(reviews, activeReviewId);
+          renderReview(activeReview);
+        }
+      } catch (error) {
+        if (loginMessage) {
+          loginMessage.textContent = error instanceof Error ? error.message : "로그인에 실패했습니다.";
+        }
+      }
+    });
+  }
+
+  if (logoutButton) {
+    logoutButton.addEventListener("click", async () => {
+      try {
+        await logoutRequest();
+      } catch (error) {
+        // Ignore logout network errors and still lock the UI locally.
+      }
+
+      isAuthenticated = false;
+      isEditMode = false;
+      setGateVisibility(false);
+      setEditorVisibility(false);
+      renderViewerReviews(reviews);
+      editToggleButton.textContent = "Edit";
+      setSaveMessage("");
     });
   }
 }
 
-fetchReviews()
-  .then((reviews) => {
-    renderViewerReviews(reviews);
-  })
-  .catch(() => {
+Promise.allSettled([fetchReviews(), fetchAuthStatus()]).then(([reviewsResult, authResult]) => {
+  if (reviewsResult.status === "fulfilled") {
+    renderViewerReviews(reviewsResult.value);
+  } else {
     initViewerPage();
-  });
+  }
 
-if (document.querySelector("[data-editor-form]")) {
-  initEditorPage();
-}
+  if (authResult.status === "fulfilled") {
+    isAuthenticated = Boolean(authResult.value.authenticated);
+    isAuthConfigured = Boolean(authResult.value.configured);
+  }
+
+  if (document.querySelector("[data-editor-form]")) {
+    initEditorPage();
+  }
+});

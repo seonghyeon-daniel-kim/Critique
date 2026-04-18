@@ -16,11 +16,35 @@
       </p>
     </header>
 
+    <section class="editor-gate is-hidden" data-editor-gate>
+      <div class="gate-card">
+        <p class="eyebrow">Private Access</p>
+        <h2 class="gate-title">Editor Login</h2>
+        <p class="gate-copy">
+          편집 모드로 들어가려면 관리자 비밀번호가 필요합니다.
+        </p>
+        <form class="gate-form" data-login-form>
+          <label class="field">
+            <span>비밀번호</span>
+            <input type="password" name="password" placeholder="관리자 비밀번호" required>
+          </label>
+          <p class="form-message" data-login-message></p>
+          <div class="inline-actions">
+            <button type="button" class="button-secondary" data-login-cancel>취소</button>
+            <button type="submit" class="button-primary">잠금 해제</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
     <section class="editor-panel is-hidden" data-editor-panel>
       <header class="editor-header">
         <div>
           <p class="eyebrow">Edit Mode</p>
           <h2 class="editor-title">새 리뷰 작성</h2>
+        </div>
+        <div class="editor-actions">
+          <button type="button" class="button-secondary" data-logout-button>로그아웃</button>
         </div>
       </header>
 

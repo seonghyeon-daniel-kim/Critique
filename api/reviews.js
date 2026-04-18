@@ -2,6 +2,7 @@ import { sql } from "@vercel/postgres";
 import { createClient } from "@supabase/supabase-js";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isAuthenticated, unauthorizedResponse } from "./_auth.js";
 
 const REVIEW_TABLE = "classic_critic_reviews";
 
@@ -298,6 +299,10 @@ export async function GET() {
 
 export async function POST(request) {
   try {
+    if (!isAuthenticated(request)) {
+      return unauthorizedResponse();
+    }
+
     const payload = await request.json();
     const review = normalizeReview(payload.review || {});
     await saveStoredReview(review);
@@ -310,6 +315,10 @@ export async function POST(request) {
 
 export async function DELETE(request) {
   try {
+    if (!isAuthenticated(request)) {
+      return unauthorizedResponse();
+    }
+
     const { searchParams } = new URL(request.url);
     const reviewId = searchParams.get("id") || "";
 
