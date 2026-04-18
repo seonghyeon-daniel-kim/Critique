@@ -1,6 +1,6 @@
-const REVIEW_STORAGE_KEY = "classic-critic-reviews";
 const AUTH_STORAGE_KEY = "classic-critic-editor-auth";
 const ADMIN_PASSWORD = "classiccritic-admin";
+const REVIEW_API_ENDPOINT = "/api/reviews";
 
 const defaultReview = {
   id: "beethoven-7-kleiber",
@@ -52,34 +52,6 @@ function normalizeReview(review) {
     youtubeUrl: review.youtubeUrl || "",
     body: review.body || defaultReview.body
   };
-}
-
-function loadReviews() {
-  const saved = localStorage.getItem(REVIEW_STORAGE_KEY);
-
-  if (!saved) {
-    return [defaultReview];
-  }
-
-  try {
-    const parsed = JSON.parse(saved);
-
-    if (Array.isArray(parsed)) {
-      return parsed.map((review) => normalizeReview(review));
-    }
-
-    if (parsed && typeof parsed === "object") {
-      return [normalizeReview(parsed)];
-    }
-  } catch (error) {
-    return [defaultReview];
-  }
-
-  return [defaultReview];
-}
-
-function saveReviews(reviews) {
-  localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(reviews));
 }
 
 function toYoutubeEmbedUrl(url) {
@@ -159,14 +131,12 @@ function renderReview(review, scope = document) {
   if (body) body.textContent = review.body;
 }
 
-function initViewerPage() {
+function renderViewerReviews(reviews) {
   const list = document.querySelector("[data-review-list]");
 
   if (!list) {
     return;
   }
-
-  const reviews = loadReviews();
 
   if (reviews.length === 0) {
     list.innerHTML = '<div class="review-card empty-state">아직 공개된 리뷰가 없습니다. 이 페이지 상단의 편집 영역에서 첫 리뷰를 작성하세요.</div>';
@@ -174,6 +144,55 @@ function initViewerPage() {
   }
 
   list.innerHTML = reviews.map((review) => createReviewCard(review)).join("");
+}
+
+function initViewerPage() {
+  renderViewerReviews([defaultReview]);
+}
+
+async function fetchReviews() {
+  const response = await fetch(REVIEW_API_ENDPOINT, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error("리뷰 목록을 불러오지 못했습니다.");
+  }
+
+  const data = await response.json();
+  return Array.isArray(data.reviews) ? data.reviews.map((review) => normalizeReview(review)) : [defaultReview];
+}
+
+async function saveReviewRequest(review) {
+  const response = await fetch(REVIEW_API_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ review })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "리뷰 저장에 실패했습니다.");
+  }
+
+  return Array.isArray(data.reviews) ? data.reviews.map((item) => normalizeReview(item)) : [];
+}
+
+async function deleteReviewRequest(reviewId) {
+  const response = await fetch(`${REVIEW_API_ENDPOINT}?id=${encodeURIComponent(reviewId)}`, {
+    method: "DELETE"
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "리뷰 삭제에 실패했습니다.");
+  }
+
+  return Array.isArray(data.reviews) ? data.reviews.map((item) => normalizeReview(item)) : [];
 }
 
 function setEditorVisibility(isAuthenticated) {
@@ -265,7 +284,7 @@ function initEditorPage() {
   const newReviewButton = document.querySelector("[data-new-review-button]");
   const deleteReviewButton = document.querySelector("[data-delete-review-button]");
   const isAuthenticated = localStorage.getItem(AUTH_STORAGE_KEY) === "true";
-  let reviews = loadReviews();
+  let reviews = [defaultReview];
   let activeReviewId = reviews[0]?.id || "";
 
   setEditorVisibility(isAuthenticated);
@@ -298,35 +317,46 @@ function initEditorPage() {
       setSaveMessage("새 리뷰 초안을 작성 중입니다.");
     };
 
-    if (reviews.length > 0) {
-      selectReview(reviews[0]);
-    } else {
-      startNewReview();
-    }
+    const refreshReviews = async () => {
+      try {
+        reviews = await fetchReviews();
+        renderViewerReviews(reviews);
+
+        if (reviews.length > 0) {
+          const activeReview = reviews.find((item) => item.id === activeReviewId) || reviews[0];
+          selectReview(activeReview);
+        } else {
+          startNewReview();
+        }
+      } catch (error) {
+        renderManagerList(reviews, activeReviewId);
+        setSaveMessage("서버에서 리뷰를 불러오지 못했습니다. Vercel Blob 연결을 확인하세요.");
+      }
+    };
+
+    refreshReviews();
 
     editorForm.addEventListener("input", () => {
       syncEditorPreview(getFormReview(editorForm));
     });
 
-    editorForm.addEventListener("submit", (event) => {
+    editorForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
       const review = normalizeReview(getFormReview(editorForm));
-      const existingIndex = reviews.findIndex((item) => item.id === review.id);
 
-      if (existingIndex >= 0) {
-        reviews[existingIndex] = review;
-      } else {
-        reviews = [review, ...reviews];
+      try {
+        setSaveMessage("리뷰를 저장하는 중입니다...");
+        reviews = await saveReviewRequest(review);
+        activeReviewId = review.id;
+        populateEditorForm(editorForm, review);
+        renderManagerList(reviews, activeReviewId);
+        syncEditorPreview(review);
+        renderViewerReviews(reviews);
+        setSaveMessage("리뷰가 저장되었습니다. 다른 사용자도 이 리뷰를 볼 수 있습니다.");
+      } catch (error) {
+        setSaveMessage(error instanceof Error ? error.message : "리뷰 저장에 실패했습니다.");
       }
-
-      activeReviewId = review.id;
-      saveReviews(reviews);
-      populateEditorForm(editorForm, review);
-      renderManagerList(reviews, activeReviewId);
-      syncEditorPreview(review);
-      initViewerPage();
-      setSaveMessage("리뷰가 저장되었습니다. 아래 목록에 바로 반영되었습니다.");
     });
 
     if (newReviewButton) {
@@ -336,7 +366,7 @@ function initEditorPage() {
     }
 
     if (deleteReviewButton) {
-      deleteReviewButton.addEventListener("click", () => {
+      deleteReviewButton.addEventListener("click", async () => {
         const reviewId = editorForm.elements.reviewId.value.trim();
 
         if (!reviewId) {
@@ -344,17 +374,21 @@ function initEditorPage() {
           return;
         }
 
-        reviews = reviews.filter((review) => review.id !== reviewId);
-        saveReviews(reviews);
-        initViewerPage();
+        try {
+          setSaveMessage("리뷰를 삭제하는 중입니다...");
+          reviews = await deleteReviewRequest(reviewId);
+          renderViewerReviews(reviews);
 
-        if (reviews.length > 0) {
-          selectReview(reviews[0]);
-        } else {
-          startNewReview();
+          if (reviews.length > 0) {
+            selectReview(reviews[0]);
+          } else {
+            startNewReview();
+          }
+
+          setSaveMessage("리뷰를 삭제했습니다.");
+        } catch (error) {
+          setSaveMessage(error instanceof Error ? error.message : "리뷰 삭제에 실패했습니다.");
         }
-
-        setSaveMessage("리뷰를 삭제했습니다.");
       });
     }
 
@@ -404,7 +438,13 @@ function initEditorPage() {
   }
 }
 
-initViewerPage();
+fetchReviews()
+  .then((reviews) => {
+    renderViewerReviews(reviews);
+  })
+  .catch(() => {
+    initViewerPage();
+  });
 
 if (document.querySelector("[data-editor-form]")) {
   initEditorPage();
