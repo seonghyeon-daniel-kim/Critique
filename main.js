@@ -89,6 +89,41 @@ function toYoutubeEmbedUrl(url) {
   }
 }
 
+function toYoutubeEmbedUrl(url) {
+  if (!url) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    let videoId = "";
+
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      if (parsed.pathname === "/watch") {
+        videoId = parsed.searchParams.get("v") || "";
+      } else if (parsed.pathname.startsWith("/embed/")) {
+        videoId = parsed.pathname.split("/embed/")[1] || "";
+      } else if (parsed.pathname.startsWith("/shorts/")) {
+        videoId = parsed.pathname.split("/shorts/")[1] || "";
+      }
+    }
+
+    if (host === "youtu.be") {
+      videoId = parsed.pathname.replace("/", "");
+    }
+
+    if (!videoId) {
+      return "";
+    }
+
+    videoId = videoId.split(/[?&/]/)[0];
+    return `https://www.youtube.com/embed/${videoId}`;
+  } catch (error) {
+    return "";
+  }
+}
+
 function createReviewCard(review) {
   const embedUrl = toYoutubeEmbedUrl(review.youtubeUrl);
 
