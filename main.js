@@ -151,20 +151,14 @@ function initViewerPage() {
 }
 
 async function fetchReviews() {
-  const response = await fetch(REVIEW_API_ENDPOINT, {
+  const data = await requestJson(REVIEW_API_ENDPOINT, {
     cache: "no-store"
   });
-
-  if (!response.ok) {
-    throw new Error("리뷰 목록을 불러오지 못했습니다.");
-  }
-
-  const data = await response.json();
   return Array.isArray(data.reviews) ? data.reviews.map((review) => normalizeReview(review)) : [defaultReview];
 }
 
 async function saveReviewRequest(review) {
-  const response = await fetch(REVIEW_API_ENDPOINT, {
+  const data = await requestJson(REVIEW_API_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -172,27 +166,38 @@ async function saveReviewRequest(review) {
     body: JSON.stringify({ review })
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || "리뷰 저장에 실패했습니다.");
-  }
-
   return Array.isArray(data.reviews) ? data.reviews.map((item) => normalizeReview(item)) : [];
 }
 
 async function deleteReviewRequest(reviewId) {
-  const response = await fetch(`${REVIEW_API_ENDPOINT}?id=${encodeURIComponent(reviewId)}`, {
+  const data = await requestJson(`${REVIEW_API_ENDPOINT}?id=${encodeURIComponent(reviewId)}`, {
     method: "DELETE"
   });
 
-  const data = await response.json();
+  return Array.isArray(data.reviews) ? data.reviews.map((item) => normalizeReview(item)) : [];
+}
 
-  if (!response.ok) {
-    throw new Error(data.error || "리뷰 삭제에 실패했습니다.");
+async function requestJson(url, options) {
+  const response = await fetch(url, options);
+  const raw = await response.text();
+  let data = null;
+
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch (error) {
+    const snippet = raw.slice(0, 120).trim();
+    throw new Error(
+      snippet.startsWith("<") || snippet.startsWith("The page")
+        ? "API 응답이 JSON이 아닙니다. 정적 서버가 아니라 Vercel 환경에서 실행 중인지 확인하세요."
+        : "서버 응답을 해석하지 못했습니다."
+    );
   }
 
-  return Array.isArray(data.reviews) ? data.reviews.map((item) => normalizeReview(item)) : [];
+  if (!response.ok) {
+    throw new Error(data.error || "요청 처리에 실패했습니다.");
+  }
+
+  return data;
 }
 
 function setEditorVisibility(isAuthenticated) {
