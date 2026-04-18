@@ -39,7 +39,7 @@ async function loadStoredReviews() {
   }
 
   try {
-    const result = await get(REVIEW_BLOB_PATH, { access: "private" });
+    const result = await get(REVIEW_BLOB_PATH);
 
     if (!result || result.statusCode !== 200 || !result.stream) {
       return [defaultReview];
@@ -64,7 +64,7 @@ async function saveStoredReviews(reviews) {
   }
 
   await put(REVIEW_BLOB_PATH, JSON.stringify(reviews, null, 2), {
-    access: "private",
+    access: "public",
     allowOverwrite: true,
     contentType: "application/json"
   });
