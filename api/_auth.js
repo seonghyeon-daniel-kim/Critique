@@ -126,7 +126,7 @@ export function isAuthenticated(request) {
 export function unauthorizedResponse() {
   return Response.json(
     {
-      error: "편집 권한이 없습니다. 다시 로그인하세요."
+      error: "You do not have editing access. Please log in again."
     },
     {
       status: 401,

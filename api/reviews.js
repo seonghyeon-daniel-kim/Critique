@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { isAuthenticated, unauthorizedResponse } from "./_auth.js";
 
 const REVIEW_TABLE = "classic_critic_reviews";
+export const EDITOR_PICK_PREFIX = "editor-pick:";
 
 const defaultReview = {
   id: "",
@@ -53,7 +54,7 @@ function createId() {
   return `review-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function normalizeReview(review) {
+export function normalizeReview(review) {
   return {
     id: review.id || createId(),
     label: review.label || defaultReview.label,
@@ -63,6 +64,10 @@ function normalizeReview(review) {
     youtubeUrl: review.youtubeUrl || "",
     body: review.body || defaultReview.body
   };
+}
+
+export function isEditorPickRecord(review) {
+  return String(review.id || "").startsWith(EDITOR_PICK_PREFIX);
 }
 
 function getStorageProvider() {
@@ -169,7 +174,7 @@ async function loadSupabaseReviews() {
 
   if (error) {
     throw new Error(
-      `Supabase 조회에 실패했습니다. classic_critic_reviews 테이블이 있는지 확인하세요. ${error.message}`
+      `Supabase read failed. Confirm that the classic_critic_reviews table exists. ${error.message}`
     );
   }
 
@@ -196,7 +201,7 @@ async function saveSupabaseReview(review) {
 
   if (error) {
     throw new Error(
-      `Supabase 저장에 실패했습니다. classic_critic_reviews 테이블과 권한을 확인하세요. ${error.message}`
+      `Supabase write failed. Check the classic_critic_reviews table and its permissions. ${error.message}`
     );
   }
 }
@@ -206,11 +211,11 @@ async function deleteSupabaseReview(reviewId) {
   const { error } = await client.from(REVIEW_TABLE).delete().eq("id", reviewId);
 
   if (error) {
-    throw new Error(`Supabase 삭제에 실패했습니다. ${error.message}`);
+    throw new Error(`Supabase delete failed. ${error.message}`);
   }
 }
 
-async function loadStoredReviews() {
+export async function loadStoredReviews() {
   const provider = getStorageProvider();
 
   try {
@@ -230,7 +235,7 @@ async function loadStoredReviews() {
   }
 }
 
-async function saveStoredReview(review) {
+export async function saveStoredReview(review) {
   const provider = getStorageProvider();
 
   if (provider === "vercel-postgres") {
@@ -244,11 +249,11 @@ async function saveStoredReview(review) {
   }
 
   throw new Error(
-    "저장용 데이터베이스가 설정되지 않았습니다. POSTGRES_URL 또는 SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY를 설정하세요."
+    "No database is configured for saving. Set POSTGRES_URL or SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY."
   );
 }
 
-async function deleteStoredReview(reviewId) {
+export async function deleteStoredReview(reviewId) {
   const provider = getStorageProvider();
 
   if (provider === "vercel-postgres") {
@@ -262,7 +267,7 @@ async function deleteStoredReview(reviewId) {
   }
 
   throw new Error(
-    "삭제용 데이터베이스가 설정되지 않았습니다. POSTGRES_URL 또는 SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY를 설정하세요."
+    "No database is configured for deletion. Set POSTGRES_URL or SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY."
   );
 }
 
@@ -292,7 +297,7 @@ function toErrorPayload(message, error) {
 }
 
 export async function GET() {
-  const reviews = await loadStoredReviews();
+  const reviews = (await loadStoredReviews()).filter((review) => !isEditorPickRecord(review));
   return json({ reviews });
 }
 
@@ -305,10 +310,10 @@ export async function POST(request) {
     const payload = await request.json();
     const review = normalizeReview(payload.review || {});
     await saveStoredReview(review);
-    const reviews = await loadStoredReviews();
+    const reviews = (await loadStoredReviews()).filter((item) => !isEditorPickRecord(item));
     return json({ reviews, review });
   } catch (error) {
-    return json(toErrorPayload("리뷰 저장에 실패했습니다.", error), { status: 500 });
+    return json(toErrorPayload("Could not save the review.", error), { status: 500 });
   }
 }
 
@@ -322,13 +327,13 @@ export async function DELETE(request) {
     const reviewId = searchParams.get("id") || "";
 
     if (!reviewId) {
-      return json({ error: "삭제할 리뷰 ID가 없습니다." }, { status: 400 });
+      return json({ error: "No review ID was provided for deletion." }, { status: 400 });
     }
 
     await deleteStoredReview(reviewId);
-    const reviews = await loadStoredReviews();
+    const reviews = (await loadStoredReviews()).filter((item) => !isEditorPickRecord(item));
     return json({ reviews });
   } catch (error) {
-    return json(toErrorPayload("리뷰 삭제에 실패했습니다.", error), { status: 500 });
+    return json(toErrorPayload("Could not delete the review.", error), { status: 500 });
   }
 }

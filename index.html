@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,7 +12,7 @@
       <p class="eyebrow">Timeless Reviews for Timeless Works</p>
       <h1>Classic Critic</h1>
       <p class="hero-copy">
-        깊이 있는 해석과 섬세한 문장으로 명반과 명연을 다시 듣는 클래식 음악 비평 아카이브.
+        A home for thoughtful criticism, close listening, and finely judged writing on landmark recordings and unforgettable performances.
       </p>
     </header>
 
@@ -21,17 +21,17 @@
         <p class="eyebrow">Private Access</p>
         <h2 class="gate-title">Editor Login</h2>
         <p class="gate-copy">
-          편집 모드로 들어가려면 관리자 비밀번호가 필요합니다.
+          Enter the editor password to unlock the publishing desk.
         </p>
         <form class="gate-form" data-login-form>
           <label class="field">
-            <span>비밀번호</span>
-            <input type="password" name="password" placeholder="관리자 비밀번호" required>
+            <span>Password</span>
+            <input type="password" name="password" placeholder="Editor password" required>
           </label>
           <p class="form-message" data-login-message></p>
           <div class="inline-actions">
-            <button type="button" class="button-secondary" data-login-cancel>취소</button>
-            <button type="submit" class="button-primary">잠금 해제</button>
+            <button type="button" class="button-secondary" data-login-cancel>Cancel</button>
+            <button type="submit" class="button-primary">Unlock</button>
           </div>
         </form>
       </div>
@@ -41,24 +41,40 @@
       <header class="editor-header">
         <div>
           <p class="eyebrow">Edit Mode</p>
-          <h2 class="editor-title">새 리뷰 작성</h2>
+          <h2 class="editor-title">Compose A New Review</h2>
         </div>
         <div class="editor-actions">
-          <button type="button" class="button-secondary" data-logout-button>로그아웃</button>
+          <button type="button" class="button-secondary" data-logout-button>Log Out</button>
         </div>
       </header>
 
       <div class="editor-grid">
-        <aside class="review-card manager-card">
-          <div class="review-meta">
-            <span class="review-label">Review Library</span>
-            <span class="review-rating" data-review-count>1 Review</span>
-          </div>
-          <div class="manager-actions">
-            <button type="button" class="button-primary" data-new-review-button>새 리뷰 작성</button>
-          </div>
-          <div class="review-manager-list" data-review-manager-list></div>
-        </aside>
+        <div class="editor-tools">
+          <aside class="review-card manager-card">
+            <div class="review-meta">
+              <span class="review-label">Review Library</span>
+              <span class="review-rating" data-review-count>1 Review</span>
+            </div>
+            <div class="manager-actions">
+              <button type="button" class="button-primary" data-new-review-button>New Review</button>
+            </div>
+            <div class="review-manager-list" data-review-manager-list></div>
+          </aside>
+
+          <section class="review-card pick-manager-card">
+            <div class="review-meta">
+              <span class="review-label">Sidebar</span>
+              <span class="review-rating" data-pick-count>0 / 5 Selected</span>
+            </div>
+            <form class="editor-form" data-pick-form>
+              <div class="pick-manager-list" data-pick-manager-list></div>
+              <div class="form-footer">
+                <p class="form-message" data-pick-message></p>
+                <button type="submit" class="button-primary">Apply Picks</button>
+              </div>
+            </form>
+          </section>
+        </div>
 
         <div class="editor-stack">
           <form class="editor-form review-card" data-editor-form>
@@ -69,50 +85,50 @@
             </div>
 
             <label class="field">
-              <span>라벨</span>
+              <span>Label</span>
               <input type="text" name="label" maxlength="30" required>
             </label>
 
             <label class="field">
-              <span>평점</span>
+              <span>Rating</span>
               <input type="text" name="rating" maxlength="20" placeholder="4.8 / 5" required>
             </label>
 
             <label class="field">
-              <span>작품 제목</span>
+              <span>Title</span>
               <input type="text" name="title" maxlength="80" required>
             </label>
 
             <label class="field">
-              <span>연주 정보</span>
+              <span>Performance Details</span>
               <input type="text" name="subtitle" maxlength="120" required>
             </label>
 
             <label class="field">
-              <span>유튜브 링크</span>
+              <span>YouTube Link</span>
               <input type="url" name="youtubeUrl" maxlength="300" placeholder="https://www.youtube.com/watch?v=...">
             </label>
 
             <label class="field">
-              <span>리뷰 본문</span>
+              <span>Review Text</span>
               <textarea name="body" rows="8" required></textarea>
             </label>
 
             <div class="form-footer">
               <p class="form-message" data-save-message></p>
               <div class="inline-actions">
-                <button type="button" class="button-secondary" data-delete-review-button>삭제</button>
-                <button type="submit" class="button-primary">리뷰 저장</button>
+                <button type="button" class="button-secondary" data-delete-review-button>Delete</button>
+                <button type="submit" class="button-primary">Save Review</button>
               </div>
             </div>
           </form>
 
-          <section class="review-card preview-card" aria-label="리뷰 미리보기">
+          <section class="review-card preview-card" aria-label="Review Preview">
             <div class="review-meta">
               <span class="review-label" data-review-label>Featured Review</span>
               <span class="review-rating" data-review-rating>5.0 / 5</span>
             </div>
-            <h2 data-review-title>베토벤 교향곡 7번</h2>
+            <h2 data-review-title>Beethoven: Symphony No. 7</h2>
             <p class="review-subtitle" data-review-subtitle>Carlos Kleiber · Vienna Philharmonic</p>
             <div class="video-frame-wrap is-hidden" data-video-wrap>
               <iframe
@@ -126,21 +142,37 @@
               ></iframe>
             </div>
             <p class="review-body" data-review-body>
-              이 연주는 리듬의 추진력과 구조적 긴장을 놀라울 만큼 우아하게 결합한다.
-              2악장의 장중한 호흡은 과장 없이 깊이를 확보하고, 종악장에서는 베토벤 특유의
-              광휘가 단단한 균형감 속에서 폭발한다.
+              This performance binds rhythmic drive and structural tension with remarkable poise.
+              The slow movement finds depth without excess, and the finale releases Beethoven's blaze
+              with thrilling control.
             </p>
           </section>
         </div>
       </div>
     </section>
 
-    <section class="section-heading">
-      <p class="eyebrow">Published Reviews</p>
-      <h2>리뷰 목록</h2>
-    </section>
+    <section class="content-layout">
+      <div class="content-main">
+        <section class="section-heading">
+          <p class="eyebrow">Published Reviews</p>
+          <h2>Review Archive</h2>
+        </section>
 
-    <section class="viewer-list" aria-label="리뷰 목록" data-review-list></section>
+        <section class="viewer-list" aria-label="Review archive" data-review-list></section>
+        <nav class="review-pagination" aria-label="Review pagination" data-review-pagination hidden>
+          <button type="button" class="button-secondary review-page-button" data-review-page-prev>Previous</button>
+          <p class="review-page-indicator" aria-live="polite" data-review-page-indicator>1 / 1</p>
+          <button type="button" class="button-secondary review-page-button" data-review-page-next>Next</button>
+        </nav>
+      </div>
+
+      <aside class="sidebar" aria-label="Editor's Pick">
+        <div class="sidebar-section">
+          <p class="sidebar-kicker">Editor's Pick</p>
+          <div class="pick-list" data-pick-list></div>
+        </div>
+      </aside>
+    </section>
   </main>
   <button type="button" class="edit-toggle" data-edit-toggle>Edit</button>
   <script defer type="text/javascript" src="/main.js"></script>

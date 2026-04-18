@@ -1,5 +1,8 @@
 const REVIEW_API_ENDPOINT = "/api/reviews";
 const AUTH_API_ENDPOINT = "/api/auth";
+const PICKS_API_ENDPOINT = "/api/picks";
+const REVIEWS_PER_PAGE = 3;
+const MAX_EDITOR_PICKS = 5;
 const defaultReview = {
   id: "",
   label: "Review Draft",
@@ -13,6 +16,8 @@ const defaultReview = {
 let isEditMode = false;
 let isAuthenticated = false;
 let isAuthConfigured = false;
+let editorPicks = [];
+let currentReviewPage = 1;
 
 function createEmptyReview() {
   return {
@@ -94,7 +99,7 @@ function createReviewCard(review, editable = false) {
   const embedUrl = toYoutubeEmbedUrl(review.youtubeUrl);
 
   return `
-    <article class="review-card" aria-label="${escapeHtml(review.title || "리뷰")}">
+    <article class="review-card" aria-label="${escapeHtml(review.title || "Review")}">
       <div class="review-meta">
         <span class="review-label">${escapeHtml(review.label)}</span>
         <span class="review-rating">${escapeHtml(review.rating)}</span>
@@ -103,9 +108,53 @@ function createReviewCard(review, editable = false) {
       <p class="review-subtitle">${escapeHtml(review.subtitle)}</p>
       ${embedUrl ? `<div class="video-frame-wrap"><iframe class="video-frame" src="${escapeHtml(embedUrl)}" title="YouTube video player" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : ""}
       <p class="review-body">${escapeHtml(review.body)}</p>
-      ${editable ? `<div class="review-card-actions"><button type="button" class="review-inline-button" data-edit-review="${escapeHtml(review.id)}">수정</button></div>` : ""}
+      ${editable ? `<div class="review-card-actions"><button type="button" class="review-inline-button" data-edit-review="${escapeHtml(review.id)}">Edit</button></div>` : ""}
     </article>
   `;
+}
+
+function getReviewPageCount(reviews) {
+  return Math.max(1, Math.ceil(reviews.length / REVIEWS_PER_PAGE));
+}
+
+function clampReviewPage(page, reviews) {
+  return Math.min(Math.max(page, 1), getReviewPageCount(reviews));
+}
+
+function setReviewPage(page, reviews) {
+  currentReviewPage = clampReviewPage(page, reviews);
+}
+
+function setReviewPageForReview(reviews, reviewId) {
+  const reviewIndex = reviews.findIndex((review) => review.id === reviewId);
+
+  if (reviewIndex === -1) {
+    setReviewPage(currentReviewPage, reviews);
+    return;
+  }
+
+  currentReviewPage = Math.floor(reviewIndex / REVIEWS_PER_PAGE) + 1;
+}
+
+function renderReviewPagination(reviews) {
+  const pagination = document.querySelector("[data-review-pagination]");
+  const prevButton = document.querySelector("[data-review-page-prev]");
+  const nextButton = document.querySelector("[data-review-page-next]");
+  const indicator = document.querySelector("[data-review-page-indicator]");
+
+  if (!pagination || !prevButton || !nextButton || !indicator) {
+    return;
+  }
+
+  const totalPages = getReviewPageCount(reviews);
+  const hasReviews = reviews.length > 0;
+
+  setReviewPage(currentReviewPage, reviews);
+
+  pagination.hidden = !hasReviews;
+  prevButton.disabled = !hasReviews || currentReviewPage <= 1;
+  nextButton.disabled = !hasReviews || currentReviewPage >= totalPages;
+  indicator.textContent = hasReviews ? `${currentReviewPage} / ${totalPages}` : "0 / 0";
 }
 
 function renderLoadingState() {
@@ -117,7 +166,7 @@ function renderLoadingState() {
 
   list.innerHTML = `
     <section class="loading-state" aria-live="polite">
-      <p class="loading-copy">악기들이 서로의 음을 맞추고 있습니다. 잠시만 기다려주세요.</p>
+      <p class="loading-copy">Tuning the hall. Please wait a moment.</p>
       <div class="skeleton-list">
         ${Array.from({ length: 3 }, () => `
           <article class="review-card skeleton-card" aria-hidden="true">
@@ -131,6 +180,8 @@ function renderLoadingState() {
       </div>
     </section>
   `;
+
+  renderReviewPagination([]);
 }
 
 function renderEmptyState() {
@@ -143,12 +194,115 @@ function renderEmptyState() {
   list.innerHTML = `
     <article class="review-card empty-state empty-state-card">
       <p class="empty-state-kicker">Awaiting The First Note</p>
-      <h3>침묵으로 가득 찬 공간입니다.</h3>
+      <h3>The hall is still waiting for its first performance.</h3>
       <p class="review-body">
-        아직 첫 번째 연주가 기록되지 않았습니다. Edit 버튼을 눌러 첫 비평을 시작해 보세요.
+        No review has been published yet. Open Edit mode to write the first entry in the archive.
       </p>
     </article>
   `;
+
+  renderReviewPagination([]);
+}
+
+function createEmptyPick() {
+  return {
+    id: "",
+    title: "",
+    subtitle: "",
+    youtubeUrl: "",
+    body: ""
+  };
+}
+
+function renderPicks(picks) {
+  const list = document.querySelector("[data-pick-list]");
+
+  if (!list) {
+    return;
+  }
+
+  if (picks.length === 0) {
+    list.innerHTML = '<div class="pick-empty">No Editor\'s Picks have been selected yet.</div>';
+    return;
+  }
+
+  list.innerHTML = picks
+    .map(
+      (pick) => `
+        <article class="pick-item">
+          <div class="pick-copy">
+            <h3>${escapeHtml(pick.title || "Untitled Pick")}</h3>
+            ${pick.subtitle ? `<p class="pick-subtitle">${escapeHtml(pick.subtitle)}</p>` : ""}
+            ${pick.body ? `<p class="pick-body">${escapeHtml(pick.body)}</p>` : ""}
+            ${pick.youtubeUrl ? `<a class="pick-link" href="${escapeHtml(pick.youtubeUrl)}" target="_blank" rel="noreferrer">Listen</a>` : ""}
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function getPickReviewId(pick) {
+  return pick.reviewId || String(pick.id || "").replace(/^editor-pick:/, "");
+}
+
+function syncEditorPicksWithReviews(reviews, picks) {
+  const reviewMap = new Map(reviews.map((review) => [review.id, review]));
+
+  return picks
+    .map((pick) => reviewMap.get(getPickReviewId(pick)))
+    .filter(Boolean)
+    .map((review) => ({
+      id: `editor-pick:${review.id}`,
+      reviewId: review.id,
+      title: review.title,
+      subtitle: review.subtitle,
+      youtubeUrl: review.youtubeUrl,
+      body: review.body
+    }));
+}
+
+function renderPickManager(reviews, picks) {
+  const list = document.querySelector("[data-pick-manager-list]");
+  const count = document.querySelector("[data-pick-count]");
+  const selectedReviewIds = new Set(picks.map((pick) => getPickReviewId(pick)));
+  const selectedCount = selectedReviewIds.size;
+
+  if (count) {
+    count.textContent = `${selectedCount} / ${MAX_EDITOR_PICKS} Selected`;
+  }
+
+  if (!list) {
+    return;
+  }
+
+  if (reviews.length === 0) {
+    list.innerHTML = '<div class="empty-state">Save a few reviews first, then choose up to five Editor\'s Picks.</div>';
+    return;
+  }
+
+  list.innerHTML = reviews
+    .map((review) => {
+      const isChecked = selectedReviewIds.has(review.id);
+      const isDisabled = !isChecked && selectedCount >= MAX_EDITOR_PICKS;
+
+      return `
+        <label class="pick-option${isChecked ? " is-selected" : ""}${isDisabled ? " is-disabled" : ""}">
+          <input
+            type="checkbox"
+            name="pickReviewId"
+            value="${escapeHtml(review.id)}"
+            ${isChecked ? "checked" : ""}
+            ${isDisabled ? "disabled" : ""}
+          >
+          <span class="pick-option-copy">
+            <span class="pick-option-title">${escapeHtml(review.title)}</span>
+            <span class="pick-option-meta">${escapeHtml(review.subtitle)}</span>
+          </span>
+        </label>
+      `;
+    })
+    .join("");
 }
 
 function renderReview(review, scope = document) {
@@ -188,7 +342,17 @@ function renderViewerReviews(reviews) {
     return;
   }
 
-  list.innerHTML = reviews.map((review) => createReviewCard(review, isEditMode)).join("");
+  setReviewPage(currentReviewPage, reviews);
+  const startIndex = (currentReviewPage - 1) * REVIEWS_PER_PAGE;
+  const visibleReviews = reviews.slice(startIndex, startIndex + REVIEWS_PER_PAGE);
+
+  list.innerHTML = `
+    <div class="review-page">
+      ${visibleReviews.map((review) => createReviewCard(review, isEditMode)).join("")}
+    </div>
+  `;
+
+  renderReviewPagination(reviews);
 }
 
 function initViewerPage() {
@@ -200,6 +364,14 @@ async function fetchReviews() {
     cache: "no-store"
   });
   return Array.isArray(data.reviews) ? data.reviews.map((review) => normalizeReview(review)) : [defaultReview];
+}
+
+async function fetchPicks() {
+  const data = await requestJson(PICKS_API_ENDPOINT, {
+    cache: "no-store"
+  });
+
+  return Array.isArray(data.picks) ? data.picks : [];
 }
 
 async function saveReviewRequest(review) {
@@ -222,6 +394,18 @@ async function deleteReviewRequest(reviewId) {
   return Array.isArray(data.reviews) ? data.reviews.map((item) => normalizeReview(item)) : [];
 }
 
+async function savePickRequest(reviewIds) {
+  const data = await requestJson(PICKS_API_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ reviewIds })
+  });
+
+  return Array.isArray(data.picks) ? data.picks : [];
+}
+
 async function requestJson(url, options) {
   const response = await fetch(url, options);
   const raw = await response.text();
@@ -233,13 +417,13 @@ async function requestJson(url, options) {
     const snippet = raw.slice(0, 120).trim();
     throw new Error(
       snippet.startsWith("<") || snippet.startsWith("The page")
-        ? "API 응답이 JSON이 아닙니다. 정적 서버가 아니라 Vercel 환경에서 실행 중인지 확인하세요."
-        : `서버 응답을 해석하지 못했습니다: ${snippet || "empty response"}`
+        ? "The API did not return JSON. Make sure you are running this in Vercel dev rather than a static file server."
+        : `Could not parse the server response: ${snippet || "empty response"}`
     );
   }
 
   if (!response.ok) {
-    throw new Error(data.error || "요청 처리에 실패했습니다.");
+    throw new Error(data.error || "The request could not be completed.");
   }
 
   return data;
@@ -339,7 +523,7 @@ function renderManagerList(reviews, activeId) {
   }
 
   if (reviews.length === 0) {
-    list.innerHTML = '<div class="empty-state">아직 리뷰가 없습니다. 새 리뷰를 작성해 첫 글을 올리세요.</div>';
+    list.innerHTML = '<div class="empty-state">No reviews yet. Write a new piece and begin the archive.</div>';
     return;
   }
 
@@ -365,6 +549,8 @@ function initEditorPage() {
   const loginForm = document.querySelector("[data-login-form]");
   const loginMessage = document.querySelector("[data-login-message]");
   const loginCancelButton = document.querySelector("[data-login-cancel]");
+  const pickForm = document.querySelector("[data-pick-form]");
+  const pickMessage = document.querySelector("[data-pick-message]");
   let reviews = [defaultReview];
   let activeReviewId = reviews[0]?.id || "";
 
@@ -376,9 +562,9 @@ function initEditorPage() {
       renderReview({
         ...defaultReview,
         ...review,
-        title: review.title || "제목을 입력하세요",
-        subtitle: review.subtitle || "연주 정보를 입력하세요",
-        body: review.body || "리뷰 본문을 입력하면 여기에서 미리 볼 수 있습니다."
+        title: review.title || "Enter a title",
+        subtitle: review.subtitle || "Add performer and recording details",
+        body: review.body || "Your review text will appear here as you write."
       });
     };
 
@@ -386,6 +572,7 @@ function initEditorPage() {
       activeReviewId = review.id || "";
       populateEditorForm(editorForm, review);
       renderManagerList(reviews, activeReviewId);
+      renderPickManager(reviews, editorPicks);
       syncEditorPreview(review);
       setSaveMessage("");
     };
@@ -395,14 +582,18 @@ function initEditorPage() {
       const draft = createEmptyReview();
       populateEditorForm(editorForm, draft);
       renderManagerList(reviews, activeReviewId);
+      renderPickManager(reviews, editorPicks);
       syncEditorPreview(draft);
-      setSaveMessage("새 리뷰 초안을 작성 중입니다.");
+      setSaveMessage("Drafting a new review.");
     };
 
     const refreshReviews = async () => {
       try {
         reviews = await fetchReviews();
+        editorPicks = syncEditorPicksWithReviews(reviews, editorPicks);
         renderViewerReviews(reviews);
+        renderPicks(editorPicks);
+        renderPickManager(reviews, editorPicks);
 
         if (reviews.length > 0) {
           const activeReview = reviews.find((item) => item.id === activeReviewId) || reviews[0];
@@ -412,7 +603,8 @@ function initEditorPage() {
         }
       } catch (error) {
         renderManagerList(reviews, activeReviewId);
-        setSaveMessage("서버에서 리뷰를 불러오지 못했습니다.");
+        renderPickManager(reviews, editorPicks);
+        setSaveMessage("Could not load reviews from the server.");
       }
     };
 
@@ -428,16 +620,20 @@ function initEditorPage() {
       const review = normalizeReview(getFormReview(editorForm));
 
       try {
-        setSaveMessage("리뷰를 저장하는 중입니다...");
+        setSaveMessage("Saving review...");
         reviews = await saveReviewRequest(review);
         activeReviewId = review.id;
+        setReviewPageForReview(reviews, review.id);
+        editorPicks = syncEditorPicksWithReviews(reviews, editorPicks);
         populateEditorForm(editorForm, review);
         renderManagerList(reviews, activeReviewId);
+        renderPickManager(reviews, editorPicks);
         syncEditorPreview(review);
         renderViewerReviews(reviews);
-        setSaveMessage("리뷰가 저장되었습니다. 다른 사용자도 이 리뷰를 볼 수 있습니다.");
+        renderPicks(editorPicks);
+        setSaveMessage("Review saved. It is now visible to other readers.");
       } catch (error) {
-        setSaveMessage(error instanceof Error ? error.message : "리뷰 저장에 실패했습니다.");
+        setSaveMessage(error instanceof Error ? error.message : "Could not save the review.");
       }
     });
 
@@ -452,14 +648,18 @@ function initEditorPage() {
         const reviewId = editorForm.elements.reviewId.value.trim();
 
         if (!reviewId) {
-          setSaveMessage("아직 저장되지 않은 새 초안입니다.");
+          setSaveMessage("This draft has not been saved yet.");
           return;
         }
 
         try {
-          setSaveMessage("리뷰를 삭제하는 중입니다...");
+          setSaveMessage("Deleting review...");
           reviews = await deleteReviewRequest(reviewId);
+          setReviewPage(currentReviewPage, reviews);
+          editorPicks = syncEditorPicksWithReviews(reviews, editorPicks);
           renderViewerReviews(reviews);
+          renderPicks(editorPicks);
+          renderPickManager(reviews, editorPicks);
 
           if (reviews.length > 0) {
             selectReview(reviews[0]);
@@ -467,9 +667,9 @@ function initEditorPage() {
             startNewReview();
           }
 
-          setSaveMessage("리뷰를 삭제했습니다.");
+          setSaveMessage("Review deleted.");
         } catch (error) {
-          setSaveMessage(error instanceof Error ? error.message : "리뷰 삭제에 실패했습니다.");
+          setSaveMessage(error instanceof Error ? error.message : "Could not delete the review.");
         }
       });
     }
@@ -510,11 +710,76 @@ function initEditorPage() {
     });
   }
 
+  document.addEventListener("click", (event) => {
+    const prevButton = event.target.closest("[data-review-page-prev]");
+    const nextButton = event.target.closest("[data-review-page-next]");
+
+    if (prevButton) {
+      setReviewPage(currentReviewPage - 1, reviews);
+      renderViewerReviews(reviews);
+      return;
+    }
+
+    if (nextButton) {
+      setReviewPage(currentReviewPage + 1, reviews);
+      renderViewerReviews(reviews);
+    }
+  });
+
+  if (pickForm) {
+    pickForm.addEventListener("change", (event) => {
+      const selectedReviewIds = new FormData(pickForm).getAll("pickReviewId");
+
+      if (selectedReviewIds.length > MAX_EDITOR_PICKS && event.target instanceof HTMLInputElement) {
+        event.target.checked = false;
+      }
+
+      renderPickManager(
+        reviews,
+        new FormData(pickForm).getAll("pickReviewId").slice(0, MAX_EDITOR_PICKS).map((reviewId) => ({
+          id: `editor-pick:${reviewId}`,
+          reviewId: String(reviewId)
+        }))
+      );
+
+      if (pickMessage) {
+        pickMessage.textContent = "";
+      }
+    });
+
+    pickForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const reviewIds = new FormData(pickForm)
+        .getAll("pickReviewId")
+        .map((value) => String(value));
+
+      try {
+        if (pickMessage) {
+          pickMessage.textContent = "Updating Editor's Picks...";
+        }
+
+        editorPicks = await savePickRequest(reviewIds);
+        editorPicks = syncEditorPicksWithReviews(reviews, editorPicks);
+        renderPickManager(reviews, editorPicks);
+        renderPicks(editorPicks);
+
+        if (pickMessage) {
+          pickMessage.textContent = "Editor's Picks updated.";
+        }
+      } catch (error) {
+        if (pickMessage) {
+          pickMessage.textContent =
+            error instanceof Error ? error.message : "Could not update Editor's Picks.";
+        }
+      }
+    });
+  }
+
   if (editToggleButton) {
     editToggleButton.addEventListener("click", () => {
       if (!isAuthenticated) {
         if (!isAuthConfigured) {
-          window.alert("EDIT_PASSWORD 환경변수가 설정되지 않았습니다.");
+          window.alert("The EDIT_PASSWORD environment variable is not configured.");
           return;
         }
 
@@ -526,6 +791,8 @@ function initEditorPage() {
       setGateVisibility(false);
       setEditorVisibility(isEditMode);
       renderViewerReviews(reviews);
+      renderPicks(editorPicks);
+      renderPickManager(reviews, editorPicks);
       editToggleButton.textContent = isEditMode ? "Done" : "Edit";
 
       if (!isEditMode) {
@@ -587,7 +854,7 @@ function initEditorPage() {
         }
       } catch (error) {
         if (loginMessage) {
-          loginMessage.textContent = error instanceof Error ? error.message : "로그인에 실패했습니다.";
+          loginMessage.textContent = error instanceof Error ? error.message : "Login failed.";
         }
       }
     });
@@ -606,6 +873,7 @@ function initEditorPage() {
       setGateVisibility(false);
       setEditorVisibility(false);
       renderViewerReviews(reviews);
+      renderPicks(editorPicks);
       editToggleButton.textContent = "Edit";
       setSaveMessage("");
     });
@@ -613,10 +881,19 @@ function initEditorPage() {
 }
 
 renderLoadingState();
+renderPicks([]);
 
-Promise.allSettled([fetchReviews(), fetchAuthStatus()]).then(([reviewsResult, authResult]) => {
+Promise.allSettled([fetchReviews(), fetchPicks(), fetchAuthStatus()]).then(
+  ([reviewsResult, picksResult, authResult]) => {
   if (reviewsResult.status === "fulfilled") {
+    const syncedPicks =
+      picksResult.status === "fulfilled"
+        ? syncEditorPicksWithReviews(reviewsResult.value, picksResult.value)
+        : [];
+    editorPicks = syncedPicks;
+    setReviewPage(1, reviewsResult.value);
     renderViewerReviews(reviewsResult.value);
+    renderPicks(editorPicks);
   } else {
     initViewerPage();
   }

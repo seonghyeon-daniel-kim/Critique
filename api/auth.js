@@ -29,7 +29,7 @@ export async function POST(request) {
   if (!isAuthConfigured()) {
     return json(
       {
-        error: "EDIT_PASSWORD 환경변수가 설정되지 않았습니다."
+        error: "The EDIT_PASSWORD environment variable is not configured."
       },
       { status: 500 }
     );
@@ -38,7 +38,7 @@ export async function POST(request) {
   if (!passwordMatches(password)) {
     return json(
       {
-        error: "비밀번호가 일치하지 않습니다."
+        error: "The password you entered is incorrect."
       },
       { status: 401 }
     );

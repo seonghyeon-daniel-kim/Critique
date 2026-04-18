@@ -46,6 +46,95 @@ body::before {
   padding: 64px 0;
 }
 
+.content-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 36px;
+  align-items: start;
+}
+
+.content-main {
+  display: grid;
+  gap: 24px;
+}
+
+.sidebar {
+  padding-left: 24px;
+  border-left: 1px solid rgba(92, 67, 39, 0.12);
+}
+
+.sidebar-section {
+  position: sticky;
+  top: 32px;
+  display: grid;
+  gap: 18px;
+}
+
+.sidebar-kicker {
+  margin: 0;
+  color: var(--accent);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.74rem;
+}
+
+.pick-list {
+  display: grid;
+  gap: 14px;
+}
+
+.pick-item,
+.pick-empty {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(92, 67, 39, 0.12);
+}
+
+.pick-item {
+  display: grid;
+  gap: 10px;
+}
+
+.pick-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.pick-copy h3,
+.pick-copy p,
+.pick-copy a {
+  margin: 0;
+}
+
+.pick-copy h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.pick-subtitle,
+.pick-body,
+.pick-link,
+.pick-empty {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.pick-link {
+  text-decoration: none;
+}
+
+.pick-delete-button {
+  justify-self: start;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(92, 67, 39, 0.14);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
 .combined-shell,
 .editor-shell {
   align-content: start;
@@ -265,6 +354,11 @@ h1 {
   align-items: start;
 }
 
+.editor-tools {
+  display: grid;
+  gap: 24px;
+}
+
 .editor-stack {
   display: grid;
   gap: 24px;
@@ -301,6 +395,36 @@ h1 {
 .viewer-list {
   display: grid;
   gap: 24px;
+}
+
+.review-page {
+  display: grid;
+  gap: 24px;
+}
+
+.review-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.review-page-button {
+  min-width: 88px;
+}
+
+.review-page-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.review-page-indicator {
+  margin: 0;
+  min-width: 64px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .loading-state {
@@ -405,6 +529,11 @@ h1 {
   gap: 12px;
 }
 
+.pick-manager-list {
+  display: grid;
+  gap: 12px;
+}
+
 .manager-item {
   width: 100%;
   text-align: left;
@@ -428,6 +557,48 @@ h1 {
 }
 
 .manager-item-meta {
+  display: block;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.pick-option {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(92, 67, 39, 0.12);
+  background: rgba(255, 252, 247, 0.72);
+  cursor: pointer;
+}
+
+.pick-option.is-selected {
+  border-color: rgba(138, 106, 67, 0.42);
+  background: rgba(244, 233, 215, 0.9);
+}
+
+.pick-option.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pick-option input {
+  margin: 3px 0 0;
+}
+
+.pick-option-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.pick-option-title {
+  display: block;
+  font-size: 1rem;
+}
+
+.pick-option-meta {
   display: block;
   color: var(--muted);
   font-size: 0.9rem;
@@ -472,6 +643,11 @@ h2 {
   font-weight: 500;
 }
 
+.review-card h2 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 .review-subtitle {
   margin: 10px 0 20px;
   color: var(--accent);
@@ -501,6 +677,17 @@ h2 {
 }
 
 @media (max-width: 640px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    padding-left: 0;
+    padding-top: 24px;
+    border-left: 0;
+    border-top: 1px solid rgba(92, 67, 39, 0.12);
+  }
+
   .page-shell {
     width: min(100% - 28px, 960px);
     padding: 40px 0;
@@ -519,6 +706,16 @@ h2 {
 
   .gate-card {
     padding: 24px;
+  }
+
+  .review-pagination {
+    gap: 10px;
+  }
+
+  .review-page-button {
+    min-width: 76px;
+    min-height: 42px;
+    padding: 0 14px;
   }
 
   .editor-header,
@@ -549,6 +746,17 @@ h2 {
 }
 
 @media (max-width: 920px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    padding-left: 0;
+    padding-top: 24px;
+    border-left: 0;
+    border-top: 1px solid rgba(92, 67, 39, 0.12);
+  }
+
   .editor-grid {
     grid-template-columns: 1fr;
   }
