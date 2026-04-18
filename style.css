@@ -313,6 +313,83 @@ h1 {
   backdrop-filter: blur(8px);
 }
 
+.site-footer {
+  margin-top: 12px;
+  padding: 34px 36px 28px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(249, 241, 229, 0.88), rgba(238, 224, 202, 0.82)),
+    rgba(255, 248, 238, 0.72);
+  box-shadow: var(--shadow);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.footer-column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.footer-column h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.footer-kicker {
+  margin: 0;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.footer-copy,
+.footer-copyright {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+  font-size: 0.96rem;
+}
+
+.footer-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.footer-links a,
+.footer-contact {
+  color: var(--text);
+  text-decoration: none;
+  width: fit-content;
+  border-bottom: 1px solid transparent;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.footer-links a:hover,
+.footer-links a:focus-visible,
+.footer-contact:hover,
+.footer-contact:focus-visible {
+  color: var(--accent);
+  border-color: currentColor;
+}
+
+.footer-bar {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(92, 67, 39, 0.12);
+}
+
 .edit-toggle:hover {
   background: rgba(255, 252, 247, 0.96);
 }
@@ -694,6 +771,16 @@ h2 {
     gap: 28px;
   }
 
+  .site-footer {
+    padding: 26px 24px 22px;
+    border-radius: 24px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
   .review-card {
     padding: 24px;
     border-radius: 22px;
@@ -759,5 +846,9 @@ h2 {
 
   .editor-grid {
     grid-template-columns: 1fr;
+  }
+
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
