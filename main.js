@@ -189,7 +189,7 @@ async function requestJson(url, options) {
     throw new Error(
       snippet.startsWith("<") || snippet.startsWith("The page")
         ? "API 응답이 JSON이 아닙니다. 정적 서버가 아니라 Vercel 환경에서 실행 중인지 확인하세요."
-        : "서버 응답을 해석하지 못했습니다."
+        : `서버 응답을 해석하지 못했습니다: ${snippet || "empty response"}`
     );
   }
 
