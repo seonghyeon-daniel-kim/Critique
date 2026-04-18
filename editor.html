@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classic Critic Editor</title>
+  <link href="/style.css" rel="stylesheet">
+</head>
+<body>
+  <main class="page-shell editor-shell">
+    <section class="editor-gate" data-editor-gate>
+      <div class="gate-card">
+        <p class="eyebrow">Private Access</p>
+        <h1 class="gate-title">Editor Login</h1>
+        <p class="gate-copy">
+          이 페이지는 에디터 전용입니다. 비밀번호를 입력해야 편집 화면으로 들어갈 수 있습니다.
+        </p>
+        <form class="gate-form" data-login-form>
+          <label class="field">
+            <span>비밀번호</span>
+            <input type="password" name="password" placeholder="관리자 비밀번호" required>
+          </label>
+          <p class="form-message" data-login-message></p>
+          <button type="submit" class="button-primary">입장하기</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="editor-panel is-hidden" data-editor-panel>
+      <header class="editor-header">
+        <div>
+          <p class="eyebrow">Classic Critic Editorial Desk</p>
+          <h1 class="editor-title">Review Editor</h1>
+        </div>
+        <div class="editor-actions">
+          <a class="button-secondary" href="/index.html">뷰어 페이지 보기</a>
+          <button type="button" class="button-secondary" data-logout-button>잠금</button>
+        </div>
+      </header>
+
+      <div class="editor-grid">
+        <aside class="review-card manager-card">
+          <div class="review-meta">
+            <span class="review-label">Review Library</span>
+            <span class="review-rating" data-review-count>1 Review</span>
+          </div>
+          <div class="manager-actions">
+            <button type="button" class="button-primary" data-new-review-button>새 리뷰 작성</button>
+          </div>
+          <div class="review-manager-list" data-review-manager-list></div>
+        </aside>
+
+        <div class="editor-stack">
+          <form class="editor-form review-card" data-editor-form>
+            <input type="hidden" name="reviewId">
+            <div class="review-meta">
+              <span class="review-label" data-editor-mode>Edit Review</span>
+              <span class="review-rating">Visible on Viewer</span>
+            </div>
+
+            <label class="field">
+              <span>라벨</span>
+              <input type="text" name="label" maxlength="30" required>
+            </label>
+
+            <label class="field">
+              <span>평점</span>
+              <input type="text" name="rating" maxlength="20" placeholder="4.8 / 5" required>
+            </label>
+
+            <label class="field">
+              <span>작품 제목</span>
+              <input type="text" name="title" maxlength="80" required>
+            </label>
+
+            <label class="field">
+              <span>연주 정보</span>
+              <input type="text" name="subtitle" maxlength="120" required>
+            </label>
+
+            <label class="field">
+              <span>리뷰 본문</span>
+              <textarea name="body" rows="8" required></textarea>
+            </label>
+
+            <div class="form-footer">
+              <p class="form-message" data-save-message></p>
+              <div class="inline-actions">
+                <button type="button" class="button-secondary" data-delete-review-button>삭제</button>
+                <button type="submit" class="button-primary">리뷰 저장</button>
+              </div>
+            </div>
+          </form>
+
+          <section class="review-card preview-card" aria-label="리뷰 미리보기">
+            <div class="review-meta">
+              <span class="review-label" data-review-label>Featured Review</span>
+              <span class="review-rating" data-review-rating>5.0 / 5</span>
+            </div>
+            <h2 data-review-title>베토벤 교향곡 7번</h2>
+            <p class="review-subtitle" data-review-subtitle>Carlos Kleiber · Vienna Philharmonic</p>
+            <p class="review-body" data-review-body>
+              이 연주는 리듬의 추진력과 구조적 긴장을 놀라울 만큼 우아하게 결합한다.
+              2악장의 장중한 호흡은 과장 없이 깊이를 확보하고, 종악장에서는 베토벤 특유의
+              광휘가 단단한 균형감 속에서 폭발한다.
+            </p>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script defer type="text/javascript" src="/main.js"></script>
+</body>
+</html>

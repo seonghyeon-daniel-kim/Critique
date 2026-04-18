@@ -1,14 +1,37 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
+  <title>Classic Critic</title>
   <link href='/style.css' rel='stylesheet'>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
+  <main class="page-shell viewer-shell">
+    <header class="hero">
+      <p class="eyebrow">Timeless Reviews for Timeless Works</p>
+      <h1>Classic Critic</h1>
+      <p class="hero-copy">
+        깊이 있는 해석과 섬세한 문장으로 명반과 명연을 다시 듣는 클래식 음악 비평 아카이브.
+      </p>
+    </header>
+
+    <section class="viewer-list" aria-label="리뷰 목록" data-review-list>
+      <article class="review-card" aria-label="대표 리뷰">
+        <div class="review-meta">
+          <span class="review-label">Featured Review</span>
+          <span class="review-rating">5.0 / 5</span>
+        </div>
+        <h2>베토벤 교향곡 7번</h2>
+        <p class="review-subtitle">Carlos Kleiber · Vienna Philharmonic</p>
+        <p class="review-body">
+          이 연주는 리듬의 추진력과 구조적 긴장을 놀라울 만큼 우아하게 결합한다.
+          2악장의 장중한 호흡은 과장 없이 깊이를 확보하고, 종악장에서는 베토벤 특유의
+          광휘가 단단한 균형감 속에서 폭발한다.
+        </p>
+      </article>
+    </section>
+  </main>
   <script defer type="text/javascript" src="/main.js"></script>
 </body>
 </html>
